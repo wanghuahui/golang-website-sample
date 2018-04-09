@@ -1,7 +1,5 @@
 # golang-website-sample
-Go言語でWebサイトを作ってみるサンプルです。フレームワークは
-Echo https://echo.labstack.com/ 
-を使用しています。
+Go语言实现的webapp。使用Echo https://echo.labstack.com/ 框架。 
 
 ## 概要
 
