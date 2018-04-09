@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"./model"
-	"./session"
-	"./setting"
+	"golang-website-sample/webserver/model"
+	"golang-website-sample/webserver/session"
+	"golang-website-sample/webserver/setting"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"

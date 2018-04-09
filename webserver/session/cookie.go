@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"../setting"
+	"golang-website-sample/webserver/setting"
+
 	"github.com/labstack/echo"
 )
 

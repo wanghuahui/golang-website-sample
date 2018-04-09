@@ -1,0 +1,25 @@
+{{define "content"}}
+<h2>Register</h2>
+<form action="/register" method="POST">
+    <p>
+        <label for="userid" style="width:100px">User ID: </label>
+        <input type="text" id="userid" name="userid" placeholder="User ID" value="{{.user_id}}" />
+    </p>
+    <p>
+        <label for="password" style="width:100px">Password: </label>
+        <input type="password" id="password" name="password" placeholder="Password" value="{{.password}}" />
+    </p>
+    <p>
+        <label for="password_verify" style="width:100px">Verify Password: </label>
+        <input type="password" id="password_verify" name="password_verify" placeholder="Verify Password" value="{{.password}}" />
+    </p>
+    <p>
+        <label for="fullname" style="width:100px">Full Name: </label>
+        <input type="text" id="fullname" name="fullname" placeholder="Full Name" value="{{.fullname}}" />
+    </p>
+    <input type="submit" value="注册" style="width:100px"/>
+</form>
+<p>
+    {{.msg}}
+</p>
+{{end}}

@@ -33,6 +33,8 @@ func loadTemplates() {
 		template.ParseFiles(baseTemplate, "templates/user.html"))
 	templates["login"] = template.Must(
 		template.ParseFiles(baseTemplate, "templates/login.html"))
+	templates["register"] = template.Must(
+		template.ParseFiles(baseTemplate, "templates/register.html"))
 	templates["admin"] = template.Must(
 		template.ParseFiles(baseTemplate, "templates/admin.html"))
 	templates["admin_users"] = template.Must(

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"./model"
-	"./session"
+	"golang-website-sample/webserver/model"
+	"golang-website-sample/webserver/session"
 	"github.com/labstack/echo"
 )
 

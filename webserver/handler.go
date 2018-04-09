@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"./model"
+	"golang-website-sample/webserver/model"
 
 	"github.com/labstack/echo"
 )
@@ -11,6 +11,8 @@ import (
 // ルーティングに対応するハンドラを設定します。
 func setRoute(e *echo.Echo) {
 	e.GET("/", handleIndexGet)
+	e.GET("/register", handleRegisterGet)
+	e.POST("/register", handleRegisterPost)
 	e.GET("/login", handleLoginGet)
 	e.POST("/login", handleLoginPost)
 	e.POST("/logout", handleLogoutPost)
@@ -60,6 +62,16 @@ func handleAdminUsersGet(c echo.Context) error {
 		return c.Render(http.StatusOK, "error", err)
 	}
 	return c.Render(http.StatusOK, "admin_users", users)
+}
+
+// GET:/register
+func handleRegisterGet(c echo.Context) error {
+	return c.Render(http.StatusOK, "register", nil)
+}
+
+// POST:/register
+func handleRegisterPost(c echo.Context) error {
+	return nil
 }
 
 // GET:/login
