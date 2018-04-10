@@ -2,7 +2,9 @@ package main
 
 import (
 	"net/http"
+	"strings"
 
+	"golang-website-sample/webserver/database"
 	"golang-website-sample/webserver/model"
 
 	"github.com/labstack/echo"
@@ -71,7 +73,27 @@ func handleRegisterGet(c echo.Context) error {
 
 // POST:/register
 func handleRegisterPost(c echo.Context) error {
-	return nil
+	userID := c.FormValue("userid")
+	password := c.FormValue("password")
+	passwordVer := c.FormValue("password_verify")
+	if strings.Compare(password, passwordVer) != 0 {
+		msg := "两次输入密码不一致"
+		data := map[string]string{"user_id": userID, "password": "", "msg": msg}
+		return c.Render(http.StatusOK, "register", data)
+	}
+	name := c.FormValue("fullname")
+	// 加密密码
+	encodePassword := model.EncodeStringMD5(password)
+
+	// redis保存
+	_, err := database.RedisConn.Do("HMSET", "user:"+userID, "userid", userID, "password", encodePassword, "fullname", name)
+	if err != nil {
+		c.Echo().Logger.Debugf("Redis save user info error", err)
+		msg := "redis数据库错误"
+		data := map[string]string{"user_id": userID, "password": "", "msg": msg}
+		return c.Render(http.StatusOK, "register", data)
+	}
+	return c.Redirect(http.StatusTemporaryRedirect, "/users/"+userID)
 }
 
 // GET:/login
