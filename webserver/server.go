@@ -11,6 +11,7 @@ import (
 	"golang-website-sample/webserver/model"
 	"golang-website-sample/webserver/session"
 	"golang-website-sample/webserver/setting"
+	"golang-website-sample/webserver/database"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
@@ -46,6 +47,9 @@ func main() {
 
 	// 各ルーティングに対するハンドラを設定
 	setRoute(e)
+
+	// 启动redis
+	database.RedisConnect()
 
 	// セッション管理を開始
 	sessionManager = &session.Manager{}

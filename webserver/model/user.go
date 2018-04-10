@@ -7,8 +7,11 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"strconv"
 
+	"golang-website-sample/webserver/database"
 	"github.com/labstack/echo"
+	"github.com/garyburd/redigo/redis"
 )
 
 // User はユーザーの情報を表します。
@@ -225,6 +228,7 @@ loop:
 					break
 				}
 				results := []User{}
+				// 根据用户id查询
 				for _, x := range users {
 					if x.UserID == reqUserID {
 						user := User{}
@@ -254,4 +258,26 @@ loop:
 		}
 	}
 	e.Logger.Info("model.UserDataAccessor:stop")
+}
+
+// UserCreate register new user
+func UserCreate(user User) error {
+	// 加密密码
+	encodePassword := EncodeStringMD5(string(user.Password))
+
+	ID, _ := redis.Int(database.RedisConn.Do("INCR", "id"))
+	userInfo := map[string]string{
+		"id": strconv.Itoa(ID),
+		"userid": user.UserID,
+		"password": string(encodePassword),
+		"fullname": user.FullName,
+		"roles": string(user.Roles[0]),
+	}
+	// redis保存
+	_, err := database.RedisConn.Do("HMSET", redis.Args{}.Add("user:"+user.UserID).AddFlat(userInfo)...)
+	if err != nil {
+		//log.Println(err)
+		return err
+	}
+	return nil
 }

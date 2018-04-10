@@ -12,11 +12,11 @@ var (
 )
 
 //RedisConnect func
-func RedisConnect() redis.Conn {
-	RedisConn, err := redis.Dial("tcp", ":6379")
+func RedisConnect() (err error) {
+	RedisConn, err = redis.Dial("tcp", ":6379")
 	if err != nil {
 		log.Println("redis Dial Error", err)
-		return nil
+		return
 	}
-	return RedisConn
+	return
 }

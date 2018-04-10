@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"golang-website-sample/webserver/database"
 	"golang-website-sample/webserver/model"
 
 	"github.com/labstack/echo"
@@ -82,18 +81,21 @@ func handleRegisterPost(c echo.Context) error {
 		return c.Render(http.StatusOK, "register", data)
 	}
 	name := c.FormValue("fullname")
-	// 加密密码
-	encodePassword := model.EncodeStringMD5(password)
-
-	// redis保存
-	_, err := database.RedisConn.Do("HMSET", "user:"+userID, "userid", userID, "password", encodePassword, "fullname", name)
+	
+	user := model.User{
+		UserID: userID,
+		Password: password,
+		FullName: name,
+		Roles: []string{"user"},	
+	}
+	err := model.UserCreate(user)
 	if err != nil {
 		c.Echo().Logger.Debugf("Redis save user info error", err)
 		msg := "redis数据库错误"
 		data := map[string]string{"user_id": userID, "password": "", "msg": msg}
 		return c.Render(http.StatusOK, "register", data)
 	}
-	return c.Redirect(http.StatusTemporaryRedirect, "/users/"+userID)
+	return c.Redirect(http.StatusFound, "/users/"+userID)
 }
 
 // GET:/login
