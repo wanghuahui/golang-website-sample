@@ -73,6 +73,13 @@ func handleRegisterGet(c echo.Context) error {
 // POST:/register
 func handleRegisterPost(c echo.Context) error {
 	userID := c.FormValue("userid")
+	user := &model.User{}
+	if ok := user.UserIDIsExist(userID); ok {
+		c.Echo().Logger.Debugf("user id is exist")
+		idTip := "用户ID已存在"
+		data := map[string]string{"user_id": "", "password": "", "id_tip": idTip}
+		return c.Render(http.StatusOK, "register", data)
+	}
 	password := c.FormValue("password")
 	passwordVer := c.FormValue("password_verify")
 	if strings.Compare(password, passwordVer) != 0 {
@@ -81,17 +88,18 @@ func handleRegisterPost(c echo.Context) error {
 		return c.Render(http.StatusOK, "register", data)
 	}
 	name := c.FormValue("fullname")
-	
-	user := model.User{
-		UserID: userID,
-		Password: password,
+
+	user = &model.User{
+		UserID:   userID,
+		Password: model.StringMD5(password),
 		FullName: name,
-		Roles: []string{"user"},	
+		Roles:    []model.Role{"user"},
 	}
-	err := model.UserCreate(user)
+	err := UserRegister(c, user)
 	if err != nil {
-		c.Echo().Logger.Debugf("Redis save user info error", err)
-		msg := "redis数据库错误"
+		user.UserDelete(userID)
+		c.Echo().Logger.Debugf("create user info error", err)
+		msg := "创建用户信息错误"
 		data := map[string]string{"user_id": userID, "password": "", "msg": msg}
 		return c.Render(http.StatusOK, "register", data)
 	}
@@ -110,18 +118,18 @@ func handleLoginPost(c echo.Context) error {
 	err := UserLogin(c, userID, password)
 	if err != nil {
 		c.Echo().Logger.Debugf("User[%s] Login Error. [%s]", userID, err)
-		msg := "ユーザーIDまたはパスワードが誤っています。"
+		msg := "用户id或密码错误。"
 		data := map[string]string{"user_id": userID, "password": "", "msg": msg}
 		return c.Render(http.StatusOK, "login", data)
 	}
-	// ログインしたユーザーが管理者かチェックする
+	// 检查用户是否为管理员
 	isAdmin, err := CheckRoleByUserID(userID, model.RoleAdmin)
 	if err != nil {
 		c.Echo().Logger.Debugf("Admin Role Check Error. [%s]", userID, err)
 		isAdmin = false
 	}
 	if isAdmin {
-		// 管理者でログインした場合には管理者のホーム画面に遷移する
+		// 如果是管理者身份，则跳转至管理者页面
 		c.Echo().Logger.Debugf("User is Admin. [%s]", userID)
 		return c.Redirect(http.StatusTemporaryRedirect, "/admin")
 	}
@@ -135,7 +143,7 @@ func handleLogoutPost(c echo.Context) error {
 		c.Echo().Logger.Debugf("User Logout Error. [%s]", err)
 		return c.Render(http.StatusOK, "login", nil)
 	}
-	msg := "ログアウトしました。"
+	msg := "退出登录。"
 	data := map[string]string{"user_id": "", "password": "", "msg": msg}
 	return c.Render(http.StatusOK, "login", data)
 }

@@ -10,8 +10,9 @@ import (
 	"strconv"
 
 	"golang-website-sample/webserver/database"
-	"github.com/labstack/echo"
+
 	"github.com/garyburd/redigo/redis"
+	"github.com/labstack/echo"
 )
 
 // User はユーザーの情報を表します。
@@ -21,6 +22,15 @@ type User struct {
 	Password StringMD5 `json:"password"`
 	FullName string    `json:"full_name"`
 	Roles    []Role    `json:"roles"`
+}
+
+// RedisUser struct
+type RedisUser struct {
+	ID       string `redis:"id"`
+	UserID   string `redis:"userid"`
+	Password string `redis:"password"`
+	FullName string `redis:"fullname"`
+	Roles    []byte `redis:"roles"`
 }
 
 // Copy は情報のコピーを行います。
@@ -229,20 +239,27 @@ loop:
 				}
 				results := []User{}
 				// 根据用户id查询
-				for _, x := range users {
-					if x.UserID == reqUserID {
-						user := User{}
-						user.Copy(&x)
-						results = append(results, user)
-						if reqOption == FindFirst {
-							break
-						}
-					}
-				}
-				if len(results) <= 0 {
+				user := User{}
+				var err error
+				if user, err = UserFind(reqUserID); err != nil {
 					cmd.responseCh <- response{nil, ErrorNotFound}
 					break
 				}
+				results = append(results, user)
+				// for _, x := range users {
+				// 	if x.UserID == reqUserID {
+				// 		user := User{}
+				// 		user.Copy(&x)
+				// 		results = append(results, user)
+				// 		if reqOption == FindFirst {
+				// 			break
+				// 		}
+				// 	}
+				// }
+				// if len(results) <= 0 {
+				// 	cmd.responseCh <- response{nil, ErrorNotFound}
+				// 	break
+				// }
 				if reqOption == FindUnique && len(results) > 1 {
 					cmd.responseCh <- response{nil, ErrorMultipleResults}
 					break
@@ -261,22 +278,78 @@ loop:
 }
 
 // UserCreate register new user
-func UserCreate(user User) error {
+func (u *User) UserCreate() error {
 	// 加密密码
-	encodePassword := EncodeStringMD5(string(user.Password))
+	encodePassword := EncodeStringMD5(string(u.Password))
 
-	ID, _ := redis.Int(database.RedisConn.Do("INCR", "id"))
-	userInfo := map[string]string{
-		"id": strconv.Itoa(ID),
-		"userid": user.UserID,
+	var roles []string
+	for _, role := range u.Roles {
+		roles = append(roles, string(role))
+	}
+	b, _ := json.Marshal(roles)
+
+	id, _ := redis.Int(database.RedisConn.Do("INCR", "id"))
+	userInfo := map[string]interface{}{
+		"id":       strconv.Itoa(id),
+		"userid":   u.UserID,
 		"password": string(encodePassword),
-		"fullname": user.FullName,
-		"roles": string(user.Roles[0]),
+		"fullname": u.FullName,
+		"roles":    b,
 	}
 	// redis保存
-	_, err := database.RedisConn.Do("HMSET", redis.Args{}.Add("user:"+user.UserID).AddFlat(userInfo)...)
+	_, err := database.RedisConn.Do("HMSET", redis.Args{}.Add("user:"+u.UserID).AddFlat(userInfo)...)
 	if err != nil {
 		//log.Println(err)
+		return err
+	}
+	return nil
+}
+
+// UserFind query user by userID
+func UserFind(userID string) (User, error) {
+	user := RedisUser{}
+	v, err := redis.Values(database.RedisConn.Do("HGETALL", "user:"+userID))
+	if err != nil {
+		return User{}, err
+	}
+	if err := redis.ScanStruct(v, &user); err != nil {
+		return User{}, err
+	}
+
+	var roles []string
+	err = json.Unmarshal(user.Roles, &roles)
+	if err != nil {
+		return User{}, err
+	}
+	var r []Role
+	for _, role := range roles {
+		r = append(r, Role(role))
+	}
+
+	u := User{
+		ID:       ID(user.ID),
+		UserID:   user.UserID,
+		Password: StringMD5(user.Password),
+		FullName: user.FullName,
+		Roles:    r,
+	}
+
+	return u, nil
+}
+
+// UserIDIsExist user id is or not unique
+func (u *User) UserIDIsExist(userID string) bool {
+	_, err := redis.String(database.RedisConn.Do("HGET", "user:"+userID, "userid"))
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// UserDelete delete user by id
+func (u *User) UserDelete(userID string) error {
+	_, err := database.RedisConn.Do("DEL", "user:"+userID)
+	if err != nil {
 		return err
 	}
 	return nil

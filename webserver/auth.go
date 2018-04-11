@@ -6,6 +6,7 @@ import (
 
 	"golang-website-sample/webserver/model"
 	"golang-website-sample/webserver/session"
+
 	"github.com/labstack/echo"
 )
 
@@ -16,7 +17,37 @@ var (
 	ErrorNotLoggedIn     = errors.New("Not Logged In")
 )
 
-// UserLogin はユーザーログイン時の処理を行います。
+// UserRegister 用户注册时处理
+func UserRegister(c echo.Context, user *model.User) error {
+	err := user.UserCreate()
+	if err != nil {
+		return err
+	}
+	sessionID, err := sessionManager.Create()
+	if err != nil {
+		return err
+	}
+	err = session.WriteCookie(c, sessionID)
+	if err != nil {
+		return err
+	}
+	sessionStore, err := sessionManager.LoadStore(sessionID)
+	if err != nil {
+		return err
+	}
+	sessionData := map[string]string{
+		"user_id": user.UserID,
+	}
+	sessionStore.Data = sessionData
+	err = sessionManager.SaveStore(sessionID, sessionStore)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UserLogin 用户登录时处理。
 func UserLogin(c echo.Context, userID string, password string) error {
 	users, err := userDA.FindByUserID(userID, model.FindFirst)
 	if err != nil {
@@ -65,7 +96,7 @@ func UserLogout(c echo.Context) error {
 	return nil
 }
 
-// CheckUserID は指定されたユーザーIDでログインしているか確認します。
+// CheckUserID 检查session中是否存在该用户id。
 func CheckUserID(c echo.Context, userID string) error {
 	sessionID, err := session.ReadCookie(c)
 	if err != nil {
